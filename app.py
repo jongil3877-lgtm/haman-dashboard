@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
-from datetime import date
+from datetime import date, datetime
 import os
 import plotly.express as px
+import plotly.graph_objects as go
 import urllib.request
 import ssl
 import io
@@ -15,80 +16,44 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. 모던 엔터프라이즈 디자인 CSS
+# 2. Control Tower V2 디자인 CSS
 st.markdown("""
-    <style>
-    .main { background-color: #f8fafc; }
-    
-    [data-testid="stSidebar"] {
-        background-color: #0f172a;
-        padding-top: 20px;
-    }
-    [data-testid="stSidebar"] .stRadio label p {
-        color: #ffffff !important;
-        font-weight: 600 !important;
-        font-size: 15px !important;
-    }
-    [data-testid="stSidebar"] .stRadio label {
-        padding: 8px 0;
-        cursor: pointer;
-    }
-
-    [data-testid="stMetric"] {
-        background-color: #ffffff;
-        padding: 22px;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e2e8f0;
-        border-top: 4px solid #1e3a8a; 
-        transition: all 0.2s ease-in-out;
-    }
-    [data-testid="stMetric"]:hover {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    }
-    [data-testid="stMetricValue"] {
-        color: #0f172a !important;
-        font-weight: 700 !important;
-        font-size: 1.7rem !important;
-    }
-    [data-testid="stMetricLabel"] {
-        color: #64748b !important;
-        font-weight: 600 !important;
-        font-size: 0.95rem !important;
-    }
-
-    [data-testid="stSelectbox"] label p {
-        font-size: 20px !important;      
-        font-weight: 900 !important;     
-        color: #0f172a !important;       
-        margin-bottom: 10px !important;
-    }
-    [data-testid="stSelectbox"] div[data-baseweb="select"] span {
-        font-size: 20px !important;      
-        font-weight: 800 !important;     
-        color: #1e3a8a !important;       
-    }
-    
-    div[data-baseweb="popover"] ul li,
-    div[data-baseweb="menu"] ul li,
-    li[role="option"],
-    li[role="option"] span {
-        font-size: 22px !important;      
-        font-weight: 900 !important;     
-        padding-top: 12px !important;    
-        padding-bottom: 12px !important;
-    }
-
-    h1, h2, h3 {
-        color: #0f172a;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+:root { --navy:#0f172a; --blue:#1e3a8a; --slate:#64748b; --bg:#f5f7fb; }
+.stApp { background: var(--bg); }
+.block-container { padding-top: 1.6rem; padding-bottom: 3rem; max-width: 1500px; }
+[data-testid="stSidebar"] { background: linear-gradient(180deg,#0b1220 0%,#111c33 100%); padding-top: 18px; }
+[data-testid="stSidebar"] * { color:#fff; }
+[data-testid="stSidebar"] .stRadio label { padding:9px 8px; border-radius:9px; }
+[data-testid="stSidebar"] .stRadio label:hover { background:rgba(255,255,255,.08); }
+[data-testid="stMetric"] { background:#fff; padding:20px; border-radius:14px; border:1px solid #e2e8f0; box-shadow:0 4px 14px rgba(15,23,42,.05); border-top:4px solid #1e3a8a; }
+[data-testid="stMetricValue"] { color:#0f172a!important; font-weight:800!important; font-size:1.65rem!important; }
+[data-testid="stMetricLabel"] { color:#64748b!important; font-weight:700!important; }
+[data-testid="stSelectbox"] label p { font-size:18px!important; font-weight:800!important; color:#0f172a!important; }
+h1,h2,h3,h4 { color:#0f172a; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+.hero { background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 58%,#2563eb 100%); padding:26px 30px; border-radius:18px; color:white; margin-bottom:18px; box-shadow:0 12px 30px rgba(30,58,138,.18); }
+.hero .eyebrow { font-size:12px; letter-spacing:1.8px; font-weight:800; color:#93c5fd; }
+.hero h1 { color:white; margin:4px 0 5px; font-size:30px; }
+.hero p { color:#dbeafe; margin:0; }
+.status-pill { display:inline-block; margin-top:12px; background:rgba(34,197,94,.18); border:1px solid rgba(134,239,172,.45); color:#dcfce7; padding:5px 10px; border-radius:999px; font-size:12px; font-weight:800; }
+.section-title { font-size:18px; font-weight:900; color:#0f172a; margin:8px 0 12px; }
+.notice-card { background:#fff; border:1px solid #dbeafe; border-left:5px solid #2563eb; border-radius:12px; padding:14px 16px; margin:8px 0 16px; box-shadow:0 3px 10px rgba(15,23,42,.04); }
+.small-muted { color:#64748b; font-size:12px; }
+div[data-baseweb="popover"] ul li, li[role="option"], li[role="option"] span { font-size:18px!important; font-weight:700!important; }
+</style>
+""", unsafe_allow_html=True)
 
 # ==========================================
-# 🔐 [신규] 보안 로그인 (Security Login) 로직
+# 🔐 보안 로그인 - 비밀번호를 코드에 직접 저장하지 않음
+# Streamlit Cloud: Settings > Secrets 에 APP_PASSWORD="..." 등록
+# 로컬 실행: 환경변수 APP_PASSWORD 사용 가능
 # ==========================================
+def get_app_password():
+    try:
+        return st.secrets["APP_PASSWORD"]
+    except Exception:
+        return os.environ.get("APP_PASSWORD", "")
+
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 
@@ -104,8 +69,10 @@ if not st.session_state["authenticated"]:
         entered_pwd = st.text_input("접속 비밀번호를 입력하세요.", type="password", placeholder="비밀번호 입력")
         
         if st.button("로그인 (Login)", use_container_width=True):
-            # 🔥 아래 "rkg2026" 글자를 원하시는 비밀번호로 자유롭게 바꾸시면 됩니다!
-            if entered_pwd == "rkg2026": 
+            app_password = get_app_password()
+            if not app_password:
+                st.error("관리자 설정 오류: APP_PASSWORD가 등록되지 않았습니다.")
+            elif entered_pwd == app_password: 
                 st.session_state["authenticated"] = True
                 st.rerun()
             else:
@@ -325,20 +292,32 @@ st.sidebar.markdown("""
 
 menu = st.sidebar.radio(
     "메뉴 선택",
-    ["대시보드 (Home)", "안전 교육 (Safety Edu)", "작업일지 (TBM Log)", "운영 현황 (실적 관리)"]
+    ["🏠 Control Tower", "📊 KPI 상세", "📦 운영 실적", "🦺 Safety / APW", "👷 TBM", "🎓 안전 교육"]
 )
 
+st.sidebar.markdown("---")
+if st.sidebar.button("로그아웃", use_container_width=True):
+    st.session_state["authenticated"] = False
+    st.rerun()
+
 # --- [메뉴 1] 홈 및 대시보드 ---
-if menu == "대시보드 (Home)":
-    st.markdown("## RKG 함안센터 KPI 및 안전·품질 현황")
-    st.markdown("---")
+if menu == "🏠 Control Tower":
+    now_txt = datetime.now().strftime("%Y.%m.%d %H:%M")
+    st.markdown(f"""
+    <div class="hero">
+      <div class="eyebrow">RKG HAMAN CENTER · OPERATIONS CONTROL TOWER</div>
+      <h1>함안센터 통합 운영 상황판</h1>
+      <p>KPI · 안전 · 품질 · 물동량을 한 화면에서 확인합니다.</p>
+      <span class="status-pill">● 정상 운영 · {now_txt} 기준</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     kpi_df, is_live, error_msg = load_kpi_data()
     
     notice_df = load_notice_data()
     latest_notice = notice_df.iloc[0]['공지내용'] if not notice_df.empty else "등록된 공지사항이 없습니다."
     
-    st.info(f"💡 **센터 주요 공지사항:** {latest_notice}")
+    st.markdown(f'<div class="notice-card"><b>📢 센터 주요 공지</b><br>{latest_notice}</div>', unsafe_allow_html=True)
     
     with st.expander("📢 공지사항 수정 및 이전 이력 보기", expanded=False):
         with st.form("notice_form", clear_on_submit=True):
@@ -437,12 +416,15 @@ if menu == "대시보드 (Home)":
     with row1_c1:
         fig1 = px.line(kpi_df, x="월", y=["가동율", "실가동율"], markers=True, title="가동율 및 실가동율 추이 (%)", color_discrete_sequence=['#1e3a8a', '#0d9488'], template="plotly_white")
         fig1.update_traces(mode="lines+markers+text", textposition="top center", texttemplate='%{y:.1f}')
+        fig1.add_hline(y=75.0, line_dash='dash', annotation_text='가동율 목표 75.0%')
+        fig1.add_hline(y=90.0, line_dash='dot', annotation_text='실가동율 목표 90.0%')
         fig1.update_layout(xaxis_title="연월", yaxis_title="비율 (%)", legend_title_text='구분', margin=dict(t=40, b=10, l=10, r=10), xaxis_tickangle=-45)
         st.plotly_chart(fig1, use_container_width=True)
 
     with row1_c2:
         fig2 = px.bar(kpi_df, x="월", y="클레임", text="클레임", title="클레임 (#6,7) 발생 현황 (건)", color_discrete_sequence=['#e11d48'], template="plotly_white")
         fig2.update_traces(textposition='outside')
+        fig2.add_hline(y=2.0, line_dash='dash', annotation_text='목표 2.00 이하')
         fig2.update_layout(xaxis_title="연월", yaxis_title="발생 건수", margin=dict(t=40, b=10, l=10, r=10), xaxis_tickangle=-45)
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -450,12 +432,15 @@ if menu == "대시보드 (Home)":
     with row2_c1:
         fig3 = px.bar(kpi_df, x="월", y="상차율", text="상차율", title="상차율 (CBM) 추이", color_discrete_sequence=['#d97706'], template="plotly_white")
         fig3.update_traces(textposition='outside')
+        fig3.add_hline(y=23.0, line_dash='dash', annotation_text='TARGET 23.0 CBM')
         fig3.update_layout(xaxis_title="연월", yaxis_title="CBM", margin=dict(t=40, b=10, l=10, r=10), xaxis_tickangle=-45)
         st.plotly_chart(fig3, use_container_width=True)
 
     with row2_c2:
         fig4 = px.line(kpi_df, x="월", y=["정시출하율", "정시도착율"], markers=True, title="정시 출하율 및 도착율 추이 (%)", color_discrete_sequence=['#7c3aed', '#0284c7'], template="plotly_white")
         fig4.update_traces(mode="lines+markers+text", textposition="top center", texttemplate='%{y:.1f}')
+        fig4.add_hline(y=99.5, line_dash='dash', annotation_text='출하 목표 99.5%')
+        fig4.add_hline(y=97.5, line_dash='dot', annotation_text='도착 목표 97.5%')
         fig4.update_layout(xaxis_title="연월", yaxis_title="비율 (%)", legend_title_text='구분', margin=dict(t=40, b=10, l=10, r=10), yaxis=dict(range=[80, 105]), xaxis_tickangle=-45)
         st.plotly_chart(fig4, use_container_width=True)
 
@@ -485,8 +470,40 @@ if menu == "대시보드 (Home)":
                 st.success("구글 시트 주소가 저장되었습니다! 화면이 새로고침됩니다.")
                 st.rerun()
 
+# --- [메뉴] KPI 상세 ---
+elif menu == "📊 KPI 상세":
+    st.markdown("### 📊 KPI 상세 분석")
+    st.caption("월별 KPI 실적과 목표 달성 여부를 집중 확인합니다.")
+    kpi_df, is_live, error_msg = load_kpi_data()
+    targets = {"클레임": 2.0, "상차율": 23.0, "가동율": 75.0, "실가동율": 90.0, "정시출하율": 99.5, "정시도착율": 97.5}
+    metric = st.selectbox("분석 KPI 선택", list(targets.keys()))
+    fig = px.line(kpi_df, x="월", y=metric, markers=True, text=metric, template="plotly_white", title=f"{metric} 월별 추이")
+    fig.update_traces(textposition="top center")
+    fig.add_hline(y=targets[metric], line_dash="dash", annotation_text=f"목표 {targets[metric]}")
+    st.plotly_chart(fig, use_container_width=True)
+    view = kpi_df[["월", metric]].copy()
+    if metric == "클레임":
+        view["상태"] = view[metric].apply(lambda x: "🟢 달성" if x <= targets[metric] else "🔴 미달")
+    else:
+        view["상태"] = view[metric].apply(lambda x: "🟢 달성" if x >= targets[metric] else "🔴 미달")
+    st.dataframe(view, use_container_width=True, hide_index=True)
+
+# --- [메뉴] Safety / APW ---
+elif menu == "🦺 Safety / APW":
+    st.markdown("### 🦺 Safety / APW 현황")
+    tbm_df = load_tbm_data()
+    start_accident_free = date(2026, 1, 1)
+    days = (date.today() - start_accident_free).days + 1
+    c1, c2, c3 = st.columns(3)
+    c1.metric("무재해 달성", f"{days}일", "목표 365일")
+    c2.metric("누적 TBM", f"{len(tbm_df)}회", "지속 누적")
+    c3.metric("APW 진단", "3.43 Level", "T/G 3.0 초과")
+    st.progress(min(days / 365, 1.0), text=f"무재해 연간 목표 진행률 {min(days/365*100,100):.1f}%")
+    st.markdown("#### 최근 TBM")
+    st.dataframe(tbm_df.sort_values("실시일자", ascending=False).head(5), use_container_width=True, hide_index=True)
+
 # --- [메뉴 2] 안전 교육 ---
-elif menu == "안전 교육 (Safety Edu)":
+elif menu == "🎓 안전 교육":
     st.markdown("### 📺 월별 안전 보건 교육")
     st.markdown("---")
     
@@ -560,7 +577,7 @@ elif menu == "안전 교육 (Safety Edu)":
             st.info("아직 보관된 교육일지 파일이 없습니다.")
 
 # --- [메뉴 3] TBM 작업일지 ---
-elif menu == "작업일지 (TBM Log)":
+elif menu == "👷 TBM":
     st.markdown("### 👷‍♂️ TBM (작업 전 안전점검) Log")
     st.caption("현장 TBM 실시 이력 통합 조회 및 신규 등록 시스템")
     st.markdown("---")
@@ -609,7 +626,7 @@ elif menu == "작업일지 (TBM Log)":
                     st.rerun()
 
 # --- [메뉴 4] 운영 현황 (실적 관리) ---
-elif menu == "운영 현황 (실적 관리)":
+elif menu == "📦 운영 실적":
     st.markdown("### 📊 센터 운영 및 실적 현황")
     st.markdown("---")
 
