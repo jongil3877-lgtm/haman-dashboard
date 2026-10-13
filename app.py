@@ -21,7 +21,7 @@ st.markdown("""
 <style>
 :root { --navy:#0f172a; --blue:#1e3a8a; --slate:#64748b; --bg:#f5f7fb; }
 .stApp { background: var(--bg); }
-.block-container { padding-top: 1.6rem; padding-bottom: 3rem; max-width: 1500px; }
+.block-container { padding-top: 3.8rem; padding-bottom: 3rem; max-width: 1500px; }
 [data-testid="stSidebar"] { background: linear-gradient(180deg,#0b1220 0%,#111c33 100%); padding-top: 18px; }
 [data-testid="stSidebar"] * { color:#fff; }
 [data-testid="stSidebar"] .stRadio label { padding:9px 8px; border-radius:9px; }
