@@ -640,16 +640,13 @@ elif menu == "📦 운영 실적":
         else:
             pass 
     
-    raw_month_list = sales_df['연월'].dropna().unique().tolist()
+    valid_sales_month_df = sales_df.dropna(how='all', subset=['매출(만원)', 'O/B', 'I/B', 'BMPR'])
+    raw_month_list = valid_sales_month_df['연월'].dropna().unique().tolist()
     valid_months = [m for m in raw_month_list if '-' in str(m) and len(str(m).split('-')) == 2 and str(m).split('-')[0].isdigit() and int(str(m).split('-')[0]) >= 2000]
     valid_months.sort(reverse=True)
     
+    # 실제 실적이 있는 월만 필터에 표시하며, 가장 최근 실적월을 기본 선택
     default_idx = 0
-    for i, m in enumerate(valid_months):
-        row = sales_df[sales_df['연월'] == m].iloc[0]
-        if pd.notna(row['매출(만원)']) or pd.notna(row['O/B']) or pd.notna(row['I/B']) or pd.notna(row['BMPR']):
-            default_idx = i
-            break
     
     def format_korean_ym(x):
         try:
