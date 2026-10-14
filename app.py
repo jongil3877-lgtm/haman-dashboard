@@ -292,7 +292,7 @@ st.sidebar.markdown("""
 
 menu = st.sidebar.radio(
     "메뉴 선택",
-    ["🏠 Control Tower", "📊 KPI 상세", "📦 운영 실적", "🦺 Safety / APW", "👷 TBM", "🎓 안전 교육"]
+    ["🏠 Control Tower", "📊 KPI 상세", "🦺 Safety / APW · TBM", "🎓 안전 교육", "📦 운영 실적"]
 )
 
 st.sidebar.markdown("---")
@@ -489,18 +489,57 @@ elif menu == "📊 KPI 상세":
     st.dataframe(view, use_container_width=True, hide_index=True)
 
 # --- [메뉴] Safety / APW ---
-elif menu == "🦺 Safety / APW":
-    st.markdown("### 🦺 Safety / APW 현황")
-    tbm_df = load_tbm_data()
+elif menu == "🦺 Safety / APW · TBM":
+    st.markdown("### 🦺 Safety / APW · TBM 통합 안전관리")
+    st.caption("무재해 · APW · TBM 현황과 전체 TBM 이력을 한 화면에서 통합 관리합니다.")
+    st.markdown("---")
+    
+    tbm_history_df = load_tbm_data()
+    tbm_history_df = tbm_history_df.sort_values(by="실시일자", ascending=False).reset_index(drop=True)
+    total_tbm = len(tbm_history_df)
+    latest_date = tbm_history_df.iloc[0]['실시일자'] if total_tbm > 0 else "기록 없음"
+    
     start_accident_free = date(2026, 1, 1)
     days = (date.today() - start_accident_free).days + 1
+    
     c1, c2, c3 = st.columns(3)
     c1.metric("무재해 달성", f"{days}일", "목표 365일")
-    c2.metric("누적 TBM", f"{len(tbm_df)}회", "지속 누적")
+    c2.metric("누적 TBM", f"{total_tbm}회", f"최근 실시: {latest_date}")
     c3.metric("APW 진단", "3.43 Level", "T/G 3.0 초과")
     st.progress(min(days / 365, 1.0), text=f"무재해 연간 목표 진행률 {min(days/365*100,100):.1f}%")
-    st.markdown("#### 최근 TBM")
-    st.dataframe(tbm_df.sort_values("실시일자", ascending=False).head(5), use_container_width=True, hide_index=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("#### 📌 최근 TBM")
+    st.dataframe(tbm_history_df.head(5), use_container_width=True, hide_index=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("#### 📑 TBM 전체 누적 이력")
+    st.dataframe(tbm_history_df, use_container_width=True, height=420, hide_index=True)
+    
+    st.markdown("---")
+    with st.expander("➕ 신규 TBM 일지 작성하기", expanded=False):
+        with st.form("tbm_form", clear_on_submit=True):
+            f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+            with f_col1:
+                tbm_date = st.date_input("실시일자", value=date.today())
+            with f_col2:
+                tbm_type = st.selectbox("구분", ["주간 정기 TBM", "일일 TBM", "특별 안전 TBM"])
+            with f_col3:
+                tbm_leader = st.text_input("점검 리더", value="신종일 부장")
+            with f_col4:
+                tbm_confirmer = st.text_input("확인자", value="한진미 대리")
+            
+            t_topic = st.text_area("중점 점검 주제 및 공지 내용", placeholder="밴드에 게시한 TBM 공지 내용을 복사해 붙여넣으세요.", height=100)
+            submit_btn = st.form_submit_button("💾 TBM 기록 등록하기")
+            
+            if submit_btn:
+                if not t_topic.strip():
+                    st.error("점검 주제 및 내용을 입력해 주세요.")
+                else:
+                    new_entry = {"실시일자": str(tbm_date), "구분": tbm_type, "중점 점검 주제": t_topic, "점검 리더": tbm_leader, "확인자": tbm_confirmer}
+                    save_tbm_record(new_entry)
+                    st.success("TBM 일지가 성공적으로 등록되었습니다!")
+                    st.rerun()
 
 # --- [메뉴 2] 안전 교육 ---
 elif menu == "🎓 안전 교육":
@@ -575,55 +614,6 @@ elif menu == "🎓 안전 교육":
                             st.error(f"파일 삭제에 실패했습니다: {e}")
         else:
             st.info("아직 보관된 교육일지 파일이 없습니다.")
-
-# --- [메뉴 3] TBM 작업일지 ---
-elif menu == "👷 TBM":
-    st.markdown("### 👷‍♂️ TBM (작업 전 안전점검) Log")
-    st.caption("현장 TBM 실시 이력 통합 조회 및 신규 등록 시스템")
-    st.markdown("---")
-    
-    tbm_history_df = load_tbm_data()
-    tbm_history_df = tbm_history_df.sort_values(by="실시일자", ascending=False).reset_index(drop=True)
-    
-    total_tbm = len(tbm_history_df)
-    latest_date = tbm_history_df.iloc[0]['실시일자'] if total_tbm > 0 else "기록 없음"
-    
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("총 TBM 실시 횟수", f"{total_tbm}회")
-    with c2:
-        st.metric("가장 최근 실시일", latest_date)
-    with c3:
-        st.metric("책임 점검 리더", "신종일 부장")
-        
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("**📑 TBM 누적 이력 목록**")
-    st.dataframe(tbm_history_df, use_container_width=True, height=400)
-    
-    st.markdown("---")
-    with st.expander("➕ 신규 TBM 일지 작성하기", expanded=False):
-        with st.form("tbm_form", clear_on_submit=True):
-            f_col1, f_col2, f_col3, f_col4 = st.columns(4)
-            with f_col1:
-                tbm_date = st.date_input("실시일자", value=date.today())
-            with f_col2:
-                tbm_type = st.selectbox("구분", ["주간 정기 TBM", "일일 TBM", "특별 안전 TBM"])
-            with f_col3:
-                tbm_leader = st.text_input("점검 리더", value="신종일 부장")
-            with f_col4:
-                tbm_confirmer = st.text_input("확인자", value="한진미 대리")
-            
-            t_topic = st.text_area("중점 점검 주제 및 공지 내용", placeholder="밴드에 게시한 TBM 공지 내용을 복사해 붙여넣으세요.", height=100)
-            submit_btn = st.form_submit_button("💾 TBM 기록 등록하기")
-            
-            if submit_btn:
-                if not t_topic.strip():
-                    st.error("점검 주제 및 내용을 입력해 주세요.")
-                else:
-                    new_entry = {"실시일자": str(tbm_date), "구분": tbm_type, "중점 점검 주제": t_topic, "점검 리더": tbm_leader, "확인자": tbm_confirmer}
-                    save_tbm_record(new_entry)
-                    st.success("TBM 일지가 성공적으로 등록되었습니다!")
-                    st.rerun()
 
 # --- [메뉴 4] 운영 현황 (실적 관리) ---
 elif menu == "📦 운영 실적":
