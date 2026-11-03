@@ -373,8 +373,11 @@ if menu == "🏠 Control Tower":
     with kpi3_bmpr:
         lb_val = curr["BMPR포함 상차율"]
         lb_prev = prev["BMPR포함 상차율"]
-        lb_delta = lb_val - lb_prev
-        st.metric(label="상차율 (센터+BMPR) [목표: 23.0 CBM]", value=f"{lb_val:.1f}", delta=f"{lb_delta:+.1f}")
+        if pd.isna(lb_val):
+            st.metric(label="상차율 (센터+BMPR) [목표: 23.0 CBM]", value="자료 없음")
+        else:
+            lb_delta = None if pd.isna(lb_prev) else lb_val - lb_prev
+            st.metric(label="상차율 (센터+BMPR) [목표: 23.0 CBM]", value=f"{lb_val:.1f}", delta=None if lb_delta is None else f"{lb_delta:+.1f}")
 
     kpi4, kpi5, kpi6 = st.columns(3)
     with kpi4:
@@ -384,7 +387,8 @@ if menu == "🏠 Control Tower":
         r_val = curr["실가동율"]
         r_prev = prev["실가동율"]
         r_delta = r_val - r_prev
-        st.metric(label="(실)가동율 [목표: 75.0 (90.0)]", value=f"({r_val:.1f}%) {o_val:.1f}%", delta=f"({r_delta:+.1f}%p) {o_delta:+.1f}%p")
+        r_target = 93.0 if str(curr_month).startswith("2025년") else 90.0
+        st.metric(label=f"(실)가동율 [목표: 75.0 ({r_target:.1f})]", value=f"({r_val:.1f}%) {o_val:.1f}%", delta=f"({r_delta:+.1f}%p) {o_delta:+.1f}%p")
     
     with kpi5:
         s_val = curr["정시출하율"]
@@ -423,7 +427,8 @@ if menu == "🏠 Control Tower":
         fig1 = px.line(kpi_df, x="월", y=["가동율", "실가동율"], markers=True, title="가동율 및 실가동율 추이 (%)", color_discrete_sequence=['#1e3a8a', '#0d9488'], template="plotly_white")
         fig1.update_traces(mode="lines+markers+text", textposition="top center", texttemplate='%{y:.1f}')
         fig1.add_hline(y=75.0, line_dash='dash', annotation_text='가동율 목표 75.0%')
-        fig1.add_hline(y=90.0, line_dash='dot', annotation_text='실가동율 목표 90.0%')
+        fig1.add_hline(y=93.0, line_dash='dot', annotation_text='2025 실가동율 목표 93.0%')
+        fig1.add_hline(y=90.0, line_dash='dot', annotation_text='2026 실가동율 목표 90.0%')
         fig1.update_layout(xaxis_title="연월", yaxis_title="비율 (%)", legend_title_text='구분', margin=dict(t=40, b=10, l=10, r=10), xaxis_tickangle=-45)
         st.plotly_chart(fig1, use_container_width=True)
 
@@ -482,16 +487,33 @@ elif menu == "📊 KPI 상세":
     st.caption("월별 KPI 실적과 목표 달성 여부를 집중 확인합니다.")
     kpi_df, is_live, error_msg = load_kpi_data()
     targets = {"클레임": 2.0, "상차율": 23.0, "BMPR포함 상차율": 23.0, "가동율": 75.0, "실가동율": 90.0, "정시출하율": 99.5, "정시도착율": 97.5}
+
+    def metric_target_for_month(metric_name, month_label):
+        if metric_name == "실가동율" and str(month_label).startswith("2025년"):
+            return 93.0
+        return targets[metric_name]
+
     metric = st.selectbox("분석 KPI 선택", list(targets.keys()))
     fig = px.line(kpi_df, x="월", y=metric, markers=True, text=metric, template="plotly_white", title=f"{metric} 월별 추이")
     fig.update_traces(textposition="top center")
-    fig.add_hline(y=targets[metric], line_dash="dash", annotation_text=f"목표 {targets[metric]}")
+    if metric == "실가동율":
+        fig.add_hline(y=93.0, line_dash="dot", annotation_text="2025 목표 93.0")
+        fig.add_hline(y=90.0, line_dash="dash", annotation_text="2026 목표 90.0")
+    else:
+        fig.add_hline(y=targets[metric], line_dash="dash", annotation_text=f"목표 {targets[metric]}")
     st.plotly_chart(fig, use_container_width=True)
     view = kpi_df[["월", metric]].copy()
-    if metric == "클레임":
-        view["상태"] = view[metric].apply(lambda x: "🟢 달성" if x <= targets[metric] else "🔴 미달")
-    else:
-        view["상태"] = view[metric].apply(lambda x: "🟢 달성" if x >= targets[metric] else "🔴 미달")
+    view["목표"] = view["월"].apply(lambda month: metric_target_for_month(metric, month))
+
+    def metric_status(row):
+        value = row[metric]
+        if pd.isna(value):
+            return "⚪ 자료없음"
+        if metric == "클레임":
+            return "🟢 달성" if value <= row["목표"] else "🔴 미달"
+        return "🟢 달성" if value >= row["목표"] else "🔴 미달"
+
+    view["상태"] = view.apply(metric_status, axis=1)
     st.dataframe(view, use_container_width=True, hide_index=True)
 
 # --- [메뉴] Safety / APW ---
