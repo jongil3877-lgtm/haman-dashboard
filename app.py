@@ -351,7 +351,7 @@ if menu == "🏠 Control Tower":
     
     st.markdown(f"**📌 KPI ({curr_month} 실적 기준)**")
     
-    kpi1, kpi2, kpi3 = st.columns(3)
+    kpi1, kpi2, kpi3, kpi3_bmpr = st.columns(4)
     with kpi1:
         c_val = curr["클레임"]
         c_prev = prev["클레임"]
@@ -368,7 +368,13 @@ if menu == "🏠 Control Tower":
         l_val = curr["상차율"]
         l_prev = prev["상차율"]
         l_delta = l_val - l_prev
-        st.metric(label="상차율 (CBM) [목표: 23.0]", value=f"{l_val:.1f}", delta=f"{l_delta:+.1f}")
+        st.metric(label="상차율 (센터) [목표: 23.0 CBM]", value=f"{l_val:.1f}", delta=f"{l_delta:+.1f}")
+
+    with kpi3_bmpr:
+        lb_val = curr["BMPR포함 상차율"]
+        lb_prev = prev["BMPR포함 상차율"]
+        lb_delta = lb_val - lb_prev
+        st.metric(label="상차율 (센터+BMPR) [목표: 23.0 CBM]", value=f"{lb_val:.1f}", delta=f"{lb_delta:+.1f}")
 
     kpi4, kpi5, kpi6 = st.columns(3)
     with kpi4:
@@ -430,10 +436,10 @@ if menu == "🏠 Control Tower":
 
     row2_c1, row2_c2 = st.columns(2)
     with row2_c1:
-        fig3 = px.bar(kpi_df, x="월", y="상차율", text="상차율", title="상차율 (CBM) 추이", color_discrete_sequence=['#d97706'], template="plotly_white")
-        fig3.update_traces(textposition='outside')
+        fig3 = px.bar(kpi_df, x="월", y=["상차율", "BMPR포함 상차율"], barmode="group", title="상차율 비교 (센터 / 센터+BMPR)", color_discrete_sequence=['#d97706', '#2563eb'], template="plotly_white")
+        fig3.update_traces(texttemplate='%{y:.1f}', textposition='outside')
         fig3.add_hline(y=23.0, line_dash='dash', annotation_text='TARGET 23.0 CBM')
-        fig3.update_layout(xaxis_title="연월", yaxis_title="CBM", margin=dict(t=40, b=10, l=10, r=10), xaxis_tickangle=-45)
+        fig3.update_layout(xaxis_title="연월", yaxis_title="CBM", legend_title_text="구분", margin=dict(t=40, b=10, l=10, r=10), xaxis_tickangle=-45)
         st.plotly_chart(fig3, use_container_width=True)
 
     with row2_c2:
@@ -475,7 +481,7 @@ elif menu == "📊 KPI 상세":
     st.markdown("### 📊 KPI 상세 분석")
     st.caption("월별 KPI 실적과 목표 달성 여부를 집중 확인합니다.")
     kpi_df, is_live, error_msg = load_kpi_data()
-    targets = {"클레임": 2.0, "상차율": 23.0, "가동율": 75.0, "실가동율": 90.0, "정시출하율": 99.5, "정시도착율": 97.5}
+    targets = {"클레임": 2.0, "상차율": 23.0, "BMPR포함 상차율": 23.0, "가동율": 75.0, "실가동율": 90.0, "정시출하율": 99.5, "정시도착율": 97.5}
     metric = st.selectbox("분석 KPI 선택", list(targets.keys()))
     fig = px.line(kpi_df, x="월", y=metric, markers=True, text=metric, template="plotly_white", title=f"{metric} 월별 추이")
     fig.update_traces(textposition="top center")
