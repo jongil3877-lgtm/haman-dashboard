@@ -141,8 +141,8 @@ def save_tbm_record(new_record):
 def load_edu_data():
     if not os.path.exists(EDU_FILE):
         initial_edu = pd.DataFrame([
-            {"월": "9월", "유튜브_주소": "https://youtu.be/03oVgmC3So4?si=IU22SbQG8PZ2Gxso", "구글폼_주소": "https://docs.google.com/forms/d/e/1FAIpQLScy4COyCProsPjgTdqnx4zkfWBaLJ4b0NW1NP_FHcnXrae-gw/viewform?usp=dialog"},
-            {"월": "8월", "유튜브_주소": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "구글폼_주소": "https://forms.google.com/"},
+            {"월": "26년9월", "유튜브_주소": "https://youtu.be/03oVgmC3So4?si=IU22SbQG8PZ2Gxso", "구글폼_주소": "https://docs.google.com/forms/d/e/1FAIpQLScy4COyCProsPjgTdqnx4zkfWBaLJ4b0NW1NP_FHcnXrae-gw/viewform?usp=dialog"},
+            {"월": "26년8월", "유튜브_주소": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "구글폼_주소": "https://forms.google.com/"},
         ])
         initial_edu.to_csv(EDU_FILE, index=False, encoding="utf-8-sig")
     return pd.read_csv(EDU_FILE, encoding="utf-8-sig")
@@ -543,13 +543,13 @@ elif menu == "🦺 Safety / APW · TBM":
 
 # --- [메뉴 2] 안전 교육 ---
 elif menu == "🎓 안전 교육":
-    st.markdown("### 📺 월별 안전 보건 교육")
+    st.markdown("### 📺 연월별 안전 보건 교육")
     st.markdown("---")
     
     edu_df = load_edu_data()
     month_list = edu_df['월'].astype(str).tolist()
     
-    selected_month = st.selectbox("📅 시청할 교육 월(Monthly)을 선택하세요.", month_list)
+    selected_month = st.selectbox("📅 시청할 교육 연월(Year-Month)을 선택하세요.", month_list)
     current_data = edu_df[edu_df['월'] == selected_month].iloc[0]
     
     col_a, col_b = st.columns([2, 1])
